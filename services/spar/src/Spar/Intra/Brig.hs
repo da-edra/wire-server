@@ -1,7 +1,24 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- | Client functions for interacting with the Brig API.
-module Spar.Intra.Brig where
+module Spar.Intra.Brig
+  ( toUserSSOId
+  , fromUserSSOId
+  , getUser
+  , getUsers
+  , getUserByHandle
+  , setName
+  , setHandle
+  , setManagedBy
+  , setRichInfo
+  , bindUser
+  , deleteUser
+  , isTeamUser
+  , getZUsrOwnedTeam
+  , ensureReAuthorised
+  , ssoLogin
+  , createUser
+  ) where
 
 -- TODO: when creating user, we need to be able to provide more
 -- master data (first name, last name, ...)
