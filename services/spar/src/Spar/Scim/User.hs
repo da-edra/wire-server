@@ -111,12 +111,10 @@ instance Scim.UserDB Spar where
     updateValidScimUser tokinfo uidText =<< validateScimUser tokinfo newScimUser
 
   delete :: ScimTokenInfo -> Text -> Scim.ScimHandler Spar Bool
-  delete _ _ =
-      throwError $ Scim.ScimError
-          mempty
-          (Scim.Status 404)
-          Nothing
-          (Just "User delete is not implemented yet")  -- TODO
+  delete _ uidText = do
+    uid :: UserId <- parseUid uidText
+    lift $ Intra.Brig.deleteUser uid
+    return True
 
   getMeta :: ScimTokenInfo -> Scim.ScimHandler Spar Scim.Meta
   getMeta _ =
