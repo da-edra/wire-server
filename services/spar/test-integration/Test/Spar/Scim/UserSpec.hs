@@ -486,11 +486,16 @@ testBrigSideIsUpdated = do
 specDeleteUser :: SpecWith TestEnv
 specDeleteUser = do
     describe "DELETE /Users" $ do
-        it "responds with 405 (just making sure...)" $ do
-            env <- ask
+        it "should return 404 if we getUser after deleteUser" $ do
+            user <- randomScimUser
             (tok, _) <- registerIdPAndScimToken
-            deleteUser_ (Just tok) Nothing (env ^. teSpar)
-                !!! const 405 === statusCode
+            storedUser <- createUser tok user
+            spar <- view teSpar
+            let uid = scimUserId storedUser
+            deleteUser_ (Just tok) (Just $ uid) spar
+                !!! const 200 === statusCode
+            getUser_ (Just tok) uid spar
+              !!! const 404 === statusCode
 
     describe "DELETE /Users/:id" $ do
         it "whether implemented or not, does *NOT EVER* respond with 5xx!" $ do
