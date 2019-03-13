@@ -33,15 +33,12 @@ import Data.Range
 import Data.String.Conversions
 import Galley.Types.Teams    as Galley
 import Network.URI
-import Network.HTTP.Types.Status (statusCode)
-import Control.Monad.Catch (catchJust)
 
 import Spar.App (Spar, Env, wrapMonadClient, sparCtxOpts, sparCtxLogger, createUser_, wrapMonadClient)
 import Spar.Intra.Galley
 import Spar.Scim.Types
 import Spar.Scim.Auth ()
 import Spar.Types
-import Spar.Error (SparCustomError(..))
 
 import qualified Data.Text    as Text
 import qualified Data.UUID.V4 as UUID
@@ -122,25 +119,19 @@ instance Scim.UserDB Spar where
     case mbBrigUser of
       -- If the user doesn't exist, the deletion likely occurred already.
       -- to be idempotent we continue assuming the user has been deleted
-      Nothing -> return True
+      Nothing -> return False
       Just brigUser -> do
         unless (userTeam brigUser == Just stiTeam) $ 
-          throwError $ Scim.unauthorized "you are not authorized to delete this user"
-              -- TODO switch to 'forbidden' before merging!
+          throwError $ Scim.forbidden "you are not authorized to delete this user"
         ssoId <- maybe (logThenServerError $ "no userSSOId for user " <> cs uidText)  
                        pure
                        $ Brig.userSSOId brigUser
         uref <- either logThenServerError pure $ Intra.Brig.fromUserSSOId ssoId
-        ignoringNotFound $ lift (Intra.Brig.deleteUser uid)
-        ignoringNotFound . lift . wrapMonadClient $ Data.deleteSAMLUser uref 
-        -- REMOVE THIS; ONLY FOR TESTING
-        ignoringNotFound . lift . wrapMonadClient $ Data.deleteSAMLUser uref 
-        ignoringNotFound . lift . wrapMonadClient $ Data.deleteScimUser uid
+        lift . wrapMonadClient $ Data.deleteSAMLUser uref 
+        lift . wrapMonadClient $ Data.deleteScimUser uid
+        lift (Intra.Brig.deleteUser uid)
         return True
           where
-            ignoringNotFound action = catchJust isNotFound action $ const return ()
-            isNotFound (SAML.CustomError (SparBrigErrorWith (statusCode -> 404) _)) = Just ()
-            isNotFound _ = Nothing
             logThenServerError :: String -> Scim.ScimHandler Spar b
             logThenServerError err = do
               logger <- asks sparCtxLogger

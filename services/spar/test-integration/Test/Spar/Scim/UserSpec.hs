@@ -492,14 +492,27 @@ specDeleteUser = do
             deleteUser_ (Just tok) Nothing (env ^. teSpar)
                 !!! const 405 === statusCode
 
-    describe "DELETE /Users/:id" $ do
+    describe "*** DELETE /Users/:id" $ do
+        it "should be delete successfully and be idempotent" $ do
+            (tok, _) <- registerIdPAndScimToken
+            user <- randomScimUser
+            storedUser <- createUser tok user
+            let uid = scimUserId storedUser
+
+            spar <- view teSpar
+            deleteUser_ (Just tok) (Just uid) spar
+                !!! const 204 === statusCode
+            deleteUser_ (Just tok) (Just uid) spar
+                !!! const 204 === statusCode
+
+
         it "should return 401 if we don't provide a token" $ do
             user <- randomScimUser
             (tok, _) <- registerIdPAndScimToken
             storedUser <- createUser tok user
             spar <- view teSpar
             let uid = scimUserId storedUser
-            deleteUser_ Nothing (Just $ uid) spar
+            deleteUser_ Nothing (Just uid) spar
                 !!! const 401 === statusCode
 
         it "should return 403 if we provide a token for a different team" $ do
@@ -510,7 +523,7 @@ specDeleteUser = do
 
             (invalidTok, _) <- registerIdPAndScimToken
             spar <- view teSpar
-            deleteUser_ (Just invalidTok) (Just $ uid) spar
+            deleteUser_ (Just invalidTok) (Just uid) spar
                 !!! const 403 === statusCode
 
         it "should return 404 if we getUser after deleteUser" $ do

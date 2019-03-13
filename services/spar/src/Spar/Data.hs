@@ -524,4 +524,4 @@ deleteScimUser
 deleteScimUser uid = retry x5 . write del $ params Quorum (Identity uid)
   where
     del :: PrepQuery W (Identity UserId) ()
-    del = "DELETE FROM scim_user WHERE uid = ?"
+    del = "DELETE FROM scim_user WHERE id = ?"
