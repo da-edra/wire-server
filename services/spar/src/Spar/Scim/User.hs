@@ -33,11 +33,15 @@ import Data.Range
 import Data.String.Conversions
 import Galley.Types.Teams    as Galley
 import Network.URI
-import Spar.App (Spar, Env, wrapMonadClient, sparCtxOpts, createUser_, wrapMonadClient)
+import Network.HTTP.Types.Status (statusCode)
+import Control.Monad.Catch (catchJust)
+
+import Spar.App (Spar, Env, wrapMonadClient, sparCtxOpts, sparCtxLogger, createUser_, wrapMonadClient)
 import Spar.Intra.Galley
 import Spar.Scim.Types
 import Spar.Scim.Auth ()
 import Spar.Types
+import Spar.Error (SparCustomError(..))
 
 import qualified Data.Text    as Text
 import qualified Data.UUID.V4 as UUID
@@ -45,6 +49,7 @@ import qualified SAML2.WebSSO as SAML
 import qualified Spar.Data    as Data
 import qualified Spar.Intra.Brig as Intra.Brig
 import qualified URI.ByteString as URIBS
+import qualified System.Logger as Log
 
 import qualified Web.Scim.Class.User              as Scim
 import qualified Web.Scim.Filter                  as Scim
@@ -114,18 +119,34 @@ instance Scim.UserDB Spar where
   delete ScimTokenInfo{stiTeam} uidText = do
     uid :: UserId <- parseUid uidText
     mbBrigUser <- lift (Intra.Brig.getUser uid)
-    unless (teamMatches mbBrigUser stiTeam) $
-      throwError $ Scim.unauthorized "you are not authorized to delete this user"
-      -- TODO switch to 'forbidden' before merging!
+    case mbBrigUser of
+      -- If the user doesn't exist, the deletion likely occurred already.
+      -- to be idempotent we continue assuming the user has been deleted
+      Nothing -> return True
+      Just brigUser -> do
+        unless (userTeam brigUser == Just stiTeam) $ 
+          throwError $ Scim.unauthorized "you are not authorized to delete this user"
+              -- TODO switch to 'forbidden' before merging!
+        ssoId <- maybe (logThenServerError $ "no userSSOId for user " <> cs uidText)  
+                       pure
+                       $ Brig.userSSOId brigUser
+        uref <- either logThenServerError pure $ Intra.Brig.fromUserSSOId ssoId
+        ignoringNotFound $ lift (Intra.Brig.deleteUser uid)
+        ignoringNotFound . lift . wrapMonadClient $ Data.deleteSAMLUser uref 
+        -- REMOVE THIS; ONLY FOR TESTING
+        ignoringNotFound . lift . wrapMonadClient $ Data.deleteSAMLUser uref 
+        ignoringNotFound . lift . wrapMonadClient $ Data.deleteScimUser uid
+        return True
+          where
+            ignoringNotFound action = catchJust isNotFound action $ const return ()
+            isNotFound (SAML.CustomError (SparBrigErrorWith (statusCode -> 404) _)) = Just ()
+            isNotFound _ = Nothing
+            logThenServerError :: String -> Scim.ScimHandler Spar b
+            logThenServerError err = do
+              logger <- asks sparCtxLogger
+              Log.err logger $ Log.msg err
+              throwError $ Scim.serverError "Server Error" 
 
-    lift $ Intra.Brig.deleteUser uid
-    deleteUserFromScim uid
-    deleteUserFromSaml uid
-    return True
-      where
-        teamMatches :: Maybe User -> TeamId -> Bool
-        teamMatches Nothing _ = False
-        teamMatches (Just brigUser) teamId' = userTeam brigUser == Just teamId'
 
   getMeta :: ScimTokenInfo -> Scim.ScimHandler Spar Scim.Meta
   getMeta _ =
@@ -386,12 +407,6 @@ updScimStoredUser' (SAML.Time moddate) usr (Scim.WithMeta meta (Scim.WithId scim
       { Scim.lastModified = moddate
       , Scim.version = calculateVersion scimuid usr
       }
-
-deleteUserFromSaml = do
-  undefined
-
-deleteUserFromScim = do
-  undefined
 
 ----------------------------------------------------------------------------
 -- Utilities

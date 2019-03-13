@@ -20,6 +20,7 @@ import Cassandra
 import Control.Exception (assert)
 import Control.Lens hiding ((.=))
 import Control.Monad.Except
+import Control.Monad.Catch (MonadThrow, MonadCatch)
 import Data.Aeson as Aeson (encode, object, (.=))
 import Data.EitherR (fmapL)
 import Data.Id
@@ -49,7 +50,8 @@ import qualified System.Logger as Log
 
 
 newtype Spar a = Spar { fromSpar :: ReaderT Env (ExceptT SparError IO) a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadReader Env, MonadError SparError)
+  deriving (Functor, Applicative, Monad, MonadIO, MonadReader Env, MonadError SparError
+           , MonadThrow, MonadCatch)
 
 data Env = Env
   { sparCtxOpts         :: Opts

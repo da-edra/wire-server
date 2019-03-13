@@ -69,6 +69,7 @@ dependencies:
   - tinylog
   - transformers
   - types-common
+  - unliftio
   - unordered-containers
   - uri-bytestring
   - uuid

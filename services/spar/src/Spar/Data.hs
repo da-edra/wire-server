@@ -14,7 +14,7 @@ module Spar.Data
   , insertUser
   , getUser
   , deleteUsersByIssuer
-  , deleteSAMLUserByID
+  , deleteSAMLUser
   , insertBindCookie
   , lookupBindCookie
   , storeIdPConfig
@@ -218,8 +218,8 @@ deleteUsersByIssuer issuer = retry x5 . write del $ params Quorum (Identity issu
     del = "DELETE FROM user WHERE issuer = ?"
 
 -- | Delete a user from the saml users table.
-deleteSAMLUserByID :: (HasCallStack, MonadClient m) => SAML.UserRef -> m ()
-deleteSAMLUserByID (SAML.UserRef tenant subject) = retry x5 . write del $ params Quorum (tenant, subject)
+deleteSAMLUser :: (HasCallStack, MonadClient m) => SAML.UserRef -> m ()
+deleteSAMLUser (SAML.UserRef tenant subject) = retry x5 . write del $ params Quorum (tenant, subject)
   where
     del :: PrepQuery W (SAML.Issuer, SAML.NameID) ()
     del = "DELETE FROM user WHERE issuer = ? AND sso_id = ?"
