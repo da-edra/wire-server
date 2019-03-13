@@ -13,7 +13,7 @@ module Spar.Intra.Brig
   , setManagedBy
   , setRichInfo
   , bindUser
-  , deleteUser
+  , deleteBrigUser
   , isTeamUser
   , getZUsrOwnedTeam
   , ensureReAuthorised
@@ -258,8 +258,8 @@ bindUser uid (toUserSSOId -> ussoid) = do
     . json ussoid
   pure $ Bilge.statusCode resp < 300
 
-deleteUser :: (HasCallStack, MonadSparToBrig m, MonadIO m) => UserId -> m ()
-deleteUser buid = do
+deleteBrigUser :: (HasCallStack, MonadSparToBrig m, MonadIO m) => UserId -> m ()
+deleteBrigUser buid = do
   resp :: Response (Maybe LBS) <- call
     $ method DELETE
     . paths ["/i/users", toByteString' buid]

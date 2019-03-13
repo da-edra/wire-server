@@ -129,7 +129,7 @@ instance Scim.UserDB Spar where
         uref <- either logThenServerError pure $ Intra.Brig.fromUserSSOId ssoId
         lift . wrapMonadClient $ Data.deleteSAMLUser uref 
         lift . wrapMonadClient $ Data.deleteScimUser uid
-        lift $ Intra.Brig.deleteUser uid
+        lift $ Intra.Brig.deleteBrigUser uid
         return True
           where
             logThenServerError :: String -> Scim.ScimHandler Spar b
