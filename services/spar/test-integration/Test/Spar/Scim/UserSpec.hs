@@ -492,7 +492,7 @@ specDeleteUser = do
             deleteUser_ (Just tok) Nothing (env ^. teSpar)
                 !!! const 405 === statusCode
 
-    describe "*** DELETE /Users/:id" $ do
+    describe "DELETE /Users/:id" $ do
         it "should be delete successfully and be idempotent" $ do
             (tok, _) <- registerIdPAndScimToken
             user <- randomScimUser
@@ -544,6 +544,3 @@ specDeleteUser = do
             storedUser <- createUser tok user
             deleteUser_ (Just tok) (Just $ scimUserId storedUser) (env ^. teSpar)
                 !!! assertTrue_ (inRange (200, 499) . statusCode)
-
-        it "sets the 'deleted' flag in brig, and does nothing otherwise." $
-            pendingWith "really?  how do we destroy the data then, and when?"
