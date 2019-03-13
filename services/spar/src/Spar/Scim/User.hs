@@ -119,6 +119,8 @@ instance Scim.UserDB Spar where
       -- TODO switch to 'forbidden' before merging!
 
     lift $ Intra.Brig.deleteUser uid
+    deleteUserFromScim uid
+    deleteUserFromSaml uid
     return True
       where
         teamMatches :: Maybe User -> TeamId -> Bool
@@ -384,6 +386,12 @@ updScimStoredUser' (SAML.Time moddate) usr (Scim.WithMeta meta (Scim.WithId scim
       { Scim.lastModified = moddate
       , Scim.version = calculateVersion scimuid usr
       }
+
+deleteUserFromSaml = do
+  undefined
+
+deleteUserFromScim = do
+  undefined
 
 ----------------------------------------------------------------------------
 -- Utilities

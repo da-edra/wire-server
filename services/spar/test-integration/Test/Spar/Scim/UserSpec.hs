@@ -523,6 +523,7 @@ specDeleteUser = do
                 !!! const 204 === statusCode
             getUser_ (Just tok) uid spar
               !!! const 404 === statusCode
+
         it "whether implemented or not, does *NOT EVER* respond with 5xx!" $ do
             env <- ask
             user <- randomScimUser
