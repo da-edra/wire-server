@@ -111,10 +111,19 @@ instance Scim.UserDB Spar where
     updateValidScimUser tokinfo uidText =<< validateScimUser tokinfo newScimUser
 
   delete :: ScimTokenInfo -> Text -> Scim.ScimHandler Spar Bool
-  delete _ uidText = do
+  delete ScimTokenInfo{stiTeam} uidText = do
     uid :: UserId <- parseUid uidText
+    mbBrigUser <- lift (Intra.Brig.getUser uid)
+    unless (teamMatches mbBrigUser stiTeam) $
+      throwError $ Scim.unauthorized "you are not authorized to delete this user"
+      -- TODO switch to 'forbidden' before merging!
+
     lift $ Intra.Brig.deleteUser uid
     return True
+      where
+        teamMatches :: Maybe User -> TeamId -> Bool
+        teamMatches Nothing _ = False
+        teamMatches (Just brigUser) teamId' = userTeam brigUser == Just teamId'
 
   getMeta :: ScimTokenInfo -> Scim.ScimHandler Spar Scim.Meta
   getMeta _ =
